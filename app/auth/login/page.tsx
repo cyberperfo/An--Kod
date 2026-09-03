@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
-import { login, type AuthActionState } from "@/app/auth/actions";
+import { login, type AuthActionState } from "../actions";
 
 const initialState: AuthActionState = { error: null };
 
