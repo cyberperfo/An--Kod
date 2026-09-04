@@ -9,14 +9,22 @@ const ROLE_HOME: Record<UserRole, string> = {
 };
 
 /**
- * Supabase'in email doğrulama / magic link / OAuth akışlarının ortak çıkış noktası.
- * signUp'taki emailRedirectTo buraya işaret ediyor: ?code=... parametresiyle gelir,
- * kodu session'a çeviririz, sonra kullanıcının rolüne göre doğru panele yönlendiririz.
+ * Supabase email doğrulama / magic link / OAuth callback rotası.
+ * code parametresini session'a çevirir ve rol/hedef yönlendirmesini yapar.
  */
 export async function GET(request: NextRequest) {
-  const { searchParams, origin } = new URL(request.url);
+  const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next"); // login sırasında middleware'in eklediği orijinal hedef
+  const next = searchParams.get("next");
+
+  // .env içindeki NEXT_PUBLIC_SITE_URL (http://localhost:3001) önceliklidir.
+  // Port sapmalarını (3000 vs.) tamamen engeller.
+  const forwardedHost = request.headers.get("x-forwarded-host");
+  const fallbackOrigin = new URL(request.url).origin;
+
+  const origin =
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    (forwardedHost ? `https://${forwardedHost}` : fallbackOrigin);
 
   if (!code) {
     return NextResponse.redirect(`${origin}/auth/login?error=missing_code`);
@@ -26,17 +34,21 @@ export async function GET(request: NextRequest) {
   const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error || !data.user) {
-    return NextResponse.redirect(`${origin}/auth/login?error=invalid_or_expired_code`);
+    return NextResponse.redirect(
+      `${origin}/auth/login?error=invalid_or_expired_code`
+    );
   }
 
+  // Profil tablosundan rol kontrolü
   const { data: profile } = await supabase
     .from("profiles")
     .select("role")
     .eq("id", data.user.id)
     .single();
 
-  const role = profile?.role ?? "customer";
-  const destination = next && next.startsWith("/") ? next : ROLE_HOME[role];
+  const role = (profile?.role as UserRole) ?? "customer";
+  const destination =
+    next && next.startsWith("/") ? next : (ROLE_HOME[role] ?? "/dashboard");
 
   return NextResponse.redirect(`${origin}${destination}`);
 }

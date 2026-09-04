@@ -46,10 +46,15 @@ export async function signUp(
 
   const supabase = await createClient();
 
-  const { error } = await supabase.auth.signUp({
+  // Localde 3001 portuna, canlıda (Vercel vb.) ortam değişkenine yönlendir
+  const origin =
+    process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3001";
+
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
+      emailRedirectTo: `${origin}/auth/callback`,
       data: {
         full_name: fullName || "",
       },
@@ -60,10 +65,15 @@ export async function signUp(
     return { error: error.message };
   }
 
+  // E-posta onayı açıksa kullanıcı oluşur fakat session oluşmaz; login ekranına yönlendir
+  if (data.user && !data.session) {
+    redirect("/auth/login?message=check_email");
+  }
+
   redirect("/dashboard");
 }
 
-// Sayfa import uyumsuzluğunu önlemek için her iki ismi de dışa aktarıyoruz:
+// Sayfa import uyumluluğu için
 export const register = signUp;
 
 export async function signOut() {
