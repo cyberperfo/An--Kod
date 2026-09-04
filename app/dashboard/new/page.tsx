@@ -1,7 +1,21 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import { createMemory } from "./actions";
 
 export default function NewMemoryPage() {
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setPreviewUrl(URL.createObjectURL(file));
+    } else {
+      setPreviewUrl(null);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-stone-50 text-stone-900 antialiased p-6 sm:p-10">
       <div className="max-w-2xl mx-auto">
@@ -20,9 +34,10 @@ export default function NewMemoryPage() {
           </p>
         </div>
 
-        {/* Gerçek Form Başlangıcı: action createMemory fonksiyonuna bağlı */}
+        {/* Form Alanı */}
         <form
           action={createMemory}
+          encType="multipart/form-data"
           className="bg-white border border-stone-200 rounded-2xl p-6 sm:p-8 shadow-sm space-y-6"
         >
           {/* Fotoğraf Yükleme */}
@@ -31,25 +46,35 @@ export default function NewMemoryPage() {
               Ana Portre Fotoğrafı
             </label>
             <div className="flex items-center gap-4">
-              <div className="h-20 w-20 rounded-2xl border-2 border-dashed border-stone-200 bg-stone-50 flex items-center justify-center text-stone-400">
-                <svg
-                  className="w-8 h-8"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="1.5"
-                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+              <div className="h-20 w-20 rounded-2xl border-2 border-dashed border-stone-200 bg-stone-50 flex items-center justify-center text-stone-400 overflow-hidden shrink-0">
+                {previewUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={previewUrl}
+                    alt="Seçilen fotoğraf"
+                    className="h-full w-full object-cover"
                   />
-                </svg>
+                ) : (
+                  <svg
+                    className="w-8 h-8"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="1.5"
+                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                    />
+                  </svg>
+                )}
               </div>
               <input
                 type="file"
                 name="photo"
                 accept="image/*"
+                onChange={handlePhotoChange}
                 className="text-sm text-stone-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-stone-100 file:text-stone-700 hover:file:bg-stone-200 cursor-pointer"
               />
             </div>
@@ -74,11 +99,10 @@ export default function NewMemoryPage() {
                 Sayfa Bağlantısı (Slug)
               </label>
               <div className="flex rounded-xl border border-stone-200 overflow-hidden focus-within:border-stone-400">
-                <span className="bg-stone-50 px-3 py-2.5 text-xs text-stone-400 border-r border-stone-200 flex items-center">
+                <span className="bg-stone-50 px-3 py-2.5 text-xs text-stone-400 border-r border-stone-200 flex items-center shrink-0">
                   anikod.com/m/
                 </span>
                 <input
-                  required
                   name="slug"
                   type="text"
                   placeholder="mehmet-ozkan"
