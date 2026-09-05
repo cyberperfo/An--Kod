@@ -78,15 +78,17 @@ export async function createMemory(
     coverPhotoUrl = publicData.publicUrl;
   }
 
+  // Supabase tablonuzda hangi kolon adı varsa sadece onu bırakın. 
+  // Eğer tablonuzda kolon adı 'bio' ise alt satırdaki 'biography'yi silebilirsiniz.
+  // Eğer tablonuzda kolon adı 'biography' ise 'bio' satırını silebilirsiniz.
   const { error: insertError } = await (supabase.from("memorials") as any).insert({
     owner_id: user.id,
-    user_id: user.id, // Bazı şemalarda user_id olarak geçer
+    user_id: user.id,
     full_name: fullName,
     slug,
     birth_date: birthDate || null,
     death_date: deathDate || null,
-    biography: bio || null,
-    bio: bio || null, // Bazı şemalarda bio olarak geçer
+    biography: bio || null, // Veya sadece bio: bio || null
     cover_photo_url: coverPhotoUrl,
   });
 
