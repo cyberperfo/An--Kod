@@ -1,65 +1,107 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "../../../lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 
-export async function addMemory(formData: FormData) {
-  const supabase = await createClient();
+// 1. Ziyaretçi Mesajı Ekleme
+export async function addMemory(
+  formData: FormData
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = await createClient();
 
-  const memorialId = (formData.get("memorialId") as string)?.trim();
-  const slug = (formData.get("slug") as string)?.trim();
-  const authorName = (formData.get("authorName") as string)?.trim();
-  const message = (formData.get("message") as string)?.trim();
+    const memorialId = (formData.get("memorialId") as string)?.trim();
+    const slug = (formData.get("slug") as string)?.trim();
+    const authorName = (formData.get("authorName") as string)?.trim();
+    const message = (formData.get("message") as string)?.trim();
 
-  if (!authorName || !message || !memorialId) {
-    console.error("Zorunlu alanlar eksik:", { memorialId, authorName, message });
-    return;
+    if (!authorName || !message || !memorialId) {
+      return {
+        success: false,
+        error: "Lütfen adınızı ve mesajınızı eksiksiz girin.",
+      };
+    }
+
+    const { error } = await (supabase.from("memories") as any).insert({
+      memorial_id: memorialId,
+      author_name: authorName,
+      message: message,
+      type: "text",
+    });
+
+    if (error) {
+      console.error("Yorum eklenirken hata oluştu:", error);
+      return {
+        success: false,
+        error: `Mesaj iletilemedi: ${error.message}`,
+      };
+    }
+
+    if (slug) {
+      revalidatePath(`/m/${slug}`);
+    }
+
+    return { success: true };
+  } catch (err: any) {
+    console.error("addMemory beklenmedik hata:", err);
+    return {
+      success: false,
+      error: err.message || "Bilinmeyen bir hata oluştu.",
+    };
   }
-
-  const { error } = await supabase.from("memories").insert({
-    memorial_id: memorialId,
-    author_name: authorName,
-    message: message,
-    type: "text",
-  });
-
-  if (error) {
-    console.error("Yorum eklenirken hata oluştu:", error);
-    return;
-  }
-
-  revalidatePath(`/m/${slug}`);
 }
 
-export async function deleteMemory(formData: FormData) {
+// 2. Ziyaretçi Mesajı Silme (Sayfa Sahibi İçin)
+export async function deleteMemory(formData: FormData): Promise<void> {
   const supabase = await createClient();
 
-  // Oturum açmış kullanıcı kontrolü
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
-    console.error("Yetkisiz işlem: Oturum açılmamış.");
-    return;
+    throw new Error("Yetkisiz işlem: Oturum açılmamış.");
   }
 
   const memoryId = (formData.get("memoryId") as string)?.trim();
   const slug = (formData.get("slug") as string)?.trim();
 
   if (!memoryId || !slug) {
-    console.error("Silme işlemi için gerekli parametreler eksik:", { memoryId, slug });
-    return;
+    throw new Error("Silme parametreleri eksik.");
   }
 
-  const { error } = await supabase
-    .from("memories")
+  // Güvenlik doğrulaması: Sadece anı sayfasının sahibi silebilir
+  const { data: targetMemory, error: fetchError } = await (supabase.from("memories") as any)
+    .select(`
+      memorial_id,
+      memorials (
+        id,
+        owner_id,
+        user_id
+      )
+    `)
+    .eq("id", memoryId)
+    .single();
+
+  if (fetchError || !targetMemory?.memorials) {
+    console.error("Hedef anı kaydı bulunamadı:", fetchError);
+    throw new Error("Mesaj veya anı kaydı doğrulanamadı.");
+  }
+
+  const memorial = targetMemory.memorials;
+  const ownerId = memorial.owner_id || memorial.user_id;
+
+  if (ownerId !== user.id) {
+    throw new Error("Bu mesajı silme yetkiniz bulunmuyor.");
+  }
+
+  const { error } = await (supabase.from("memories") as any)
     .delete()
     .eq("id", memoryId);
 
   if (error) {
-    console.error("Mesaj silinirken hata oluştu:", error);
-    return;
+    console.error("Mesaj silinemedi:", error);
+    throw new Error(`Mesaj silinemedi: ${error.message}`);
   }
 
   revalidatePath(`/m/${slug}`);

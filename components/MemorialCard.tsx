@@ -3,11 +3,21 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import ShareQRModal from "./ShareQRModal";
+import OrderModal from "./OrderModal";
 import Toast from "./Toast";
 import { deleteMemorial } from "@/app/dashboard/actions";
 import type { Database } from "@/types/database.types";
 
-type Memorial = Database["public"]["Tables"]["memorials"]["Row"];
+type Memorial = Database["public"]["Tables"]["memorials"]["Row"] & {
+  orders?: Array<{
+    id: string;
+    status: string;
+    tracking_number?: string | null;
+    plate_type?: string | null;
+    plaque_type?: string | null;
+    created_at?: string;
+  }>;
+};
 
 interface MemorialCardProps {
   memorial: Memorial;
@@ -21,6 +31,49 @@ export default function MemorialCard({ memorial, siteUrl }: MemorialCardProps) {
 
   const publicUrl = `${siteUrl}/m/${memorial.slug}`;
 
+  // En son verilen siparişi al
+  const latestOrder =
+    memorial.orders && memorial.orders.length > 0
+      ? memorial.orders[memorial.orders.length - 1]
+      : null;
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "pending":
+        return {
+          label: "Sipariş Alındı",
+          className: "bg-amber-50 text-amber-700 border-amber-200",
+        };
+      case "in_production":
+      case "processing":
+      case "printed":
+        return {
+          label: "Üretimde",
+          className: "bg-blue-50 text-blue-700 border-blue-200",
+        };
+      case "shipped":
+        return {
+          label: "Kargoya Verildi",
+          className: "bg-purple-50 text-purple-700 border-purple-200",
+        };
+      case "completed":
+        return {
+          label: "Teslim Edildi",
+          className: "bg-emerald-50 text-emerald-700 border-emerald-200",
+        };
+      case "cancelled":
+        return {
+          label: "İptal Edildi",
+          className: "bg-rose-50 text-rose-700 border-rose-200",
+        };
+      default:
+        return {
+          label: "Bekliyor",
+          className: "bg-stone-50 text-stone-700 border-stone-200",
+        };
+    }
+  };
+
   const handleDelete = () => {
     const confirmed = window.confirm(
       `"${memorial.full_name}" hatıra sayfasını silmek üzeresiniz. Bu işlem geri alınamaz, emin misiniz?`
@@ -31,8 +84,12 @@ export default function MemorialCard({ memorial, siteUrl }: MemorialCardProps) {
     formData.set("id", memorial.id);
 
     startTransition(async () => {
-      await deleteMemorial(formData);
-      setToast("Anı sayfası silindi.");
+      try {
+        await deleteMemorial(formData);
+        setToast("Anı sayfası silindi.");
+      } catch (err: any) {
+        setToast(err.message || "Silinirken hata oluştu.");
+      }
     });
   };
 
@@ -87,6 +144,7 @@ export default function MemorialCard({ memorial, siteUrl }: MemorialCardProps) {
         </div>
 
         <div className="mt-6 space-y-3 border-t border-stone-100 pt-4">
+          {/* Üst Sıra: Sayfayı Gör & QR Kod Butonları */}
           <div className="flex items-center justify-between">
             <Link
               href={`/m/${memorial.slug}`}
@@ -115,7 +173,37 @@ export default function MemorialCard({ memorial, siteUrl }: MemorialCardProps) {
             </button>
           </div>
 
-          <div className="flex items-center justify-between">
+          {/* Orta Sıra: Sipariş Durumu VEYA Sipariş Verme Butonu */}
+          <div className="pt-1">
+            {latestOrder ? (
+              <div className="rounded-xl border border-stone-200 bg-stone-50/70 p-3 text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-stone-600">Plaket Siparişi:</span>
+                  <span
+                    className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${
+                      getStatusBadge(latestOrder.status).className
+                    }`}
+                  >
+                    {getStatusBadge(latestOrder.status).label}
+                  </span>
+                </div>
+
+                {latestOrder.tracking_number && (
+                  <div className="mt-2 flex items-center justify-between border-t border-stone-200/60 pt-2 text-[11px]">
+                    <span className="text-stone-400">Kargo Takip:</span>
+                    <span className="font-mono font-semibold text-stone-800">
+                      {latestOrder.tracking_number}
+                    </span>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <OrderModal memorialId={memorial.id} memorialName={memorial.full_name} />
+            )}
+          </div>
+
+          {/* Alt Sıra: Düzenle & Sil Butonları */}
+          <div className="flex items-center justify-between border-t border-stone-100 pt-2">
             <Link
               href={`/dashboard/memorials/${memorial.id}/edit`}
               className="rounded-lg px-3 py-1.5 text-xs font-medium text-stone-600 transition-colors hover:bg-stone-100"

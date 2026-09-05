@@ -17,8 +17,6 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get("code");
   const next = searchParams.get("next");
 
-  // .env içindeki NEXT_PUBLIC_SITE_URL (http://localhost:3001) önceliklidir.
-  // Port sapmalarını (3000 vs.) tamamen engeller.
   const forwardedHost = request.headers.get("x-forwarded-host");
   const fallbackOrigin = new URL(request.url).origin;
 
@@ -40,13 +38,14 @@ export async function GET(request: NextRequest) {
   }
 
   // Profil tablosundan rol kontrolü
-  const { data: profile } = await supabase
-    .from("profiles")
+  const { data: profileData } = await (supabase.from("profiles") as any)
     .select("role")
     .eq("id", data.user.id)
     .single();
 
-  const role = (profile?.role as UserRole) ?? "customer";
+  const profile = profileData as { role?: UserRole } | null;
+  const role: UserRole = profile?.role ?? "customer";
+
   const destination =
     next && next.startsWith("/") ? next : (ROLE_HOME[role] ?? "/dashboard");
 

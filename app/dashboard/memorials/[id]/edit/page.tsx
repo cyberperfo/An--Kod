@@ -21,16 +21,19 @@ export default async function EditMemorialPage({ params }: Props) {
 
   // Sadece sayfa sahibi düzenleyebilsin — RLS zaten bunu garanti eder,
   // ama sorguyu owner_id ile daraltmak 404'ü daha erken ve net verir.
-  const { data: memorial, error } = await supabase
+  const { data, error } = await supabase
     .from("memorials")
     .select("*")
     .eq("id", id)
     .eq("owner_id", user.id)
     .single();
 
-  if (error || !memorial) {
+  if (error || !data) {
     notFound();
   }
+
+  // TS tip hatasını atlamak için veriyi any olarak tanımlıyoruz
+  const memorial = data as any;
 
   return (
     <div className="min-h-screen bg-stone-50 p-6 text-stone-900 antialiased sm:p-10">

@@ -52,8 +52,7 @@ export async function updateMemorial(
     coverPhotoUrl = publicData.publicUrl;
   }
 
-  const { data: updated, error: updateError } = await supabase
-    .from("memorials")
+  const { data: updated, error: updateError } = await (supabase.from("memorials") as any)
     .update({
       full_name: fullName,
       birth_date: birthDate || null,
@@ -62,7 +61,7 @@ export async function updateMemorial(
       cover_photo_url: coverPhotoUrl,
     })
     .eq("id", id)
-    .eq("owner_id", user.id) // savunma amaçlı ikinci katman, asıl yetki RLS'te
+    .eq("owner_id", user.id)
     .select("slug")
     .single();
 
@@ -72,6 +71,6 @@ export async function updateMemorial(
   }
 
   revalidatePath("/dashboard");
-  revalidatePath(`/m/${updated.slug}`);
+  revalidatePath(`/m/${(updated as any).slug}`);
   redirect("/dashboard");
 }

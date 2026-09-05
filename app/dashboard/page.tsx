@@ -1,26 +1,42 @@
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { logout } from "./actions";
+import { signOut } from "@/app/auth/actions";
 import MemorialCard from "@/components/MemorialCard";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
 
+  // Oturum ve kullanıcı kontrolü
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser();
 
-  if (!user) {
+  if (authError || !user) {
     redirect("/auth/login");
   }
 
-  const { data: memorials } = await supabase
-    .from("memorials")
-    .select("*")
+  // Kullanıcıya ait anı sayfalarını sipariş detaylarıyla birlikte çek
+  const { data } = await (supabase.from("memorials") as any)
+    .select(`
+      *,
+      orders (
+        id,
+        status,
+        tracking_number,
+        plaque_type,
+        plate_type,
+        created_at
+      )
+    `)
     .eq("owner_id", user.id)
     .order("created_at", { ascending: false });
 
+  const memorials = (data as any[]) || [];
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
   return (
@@ -28,13 +44,20 @@ export default async function DashboardPage() {
       {/* Üst Menü / Navbar */}
       <header className="sticky top-0 z-10 border-b border-stone-200 bg-white/90 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <span className="font-serif text-xl font-bold tracking-tight text-stone-900">
               ANIKOD
             </span>
-            <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-600">
+            <span className="rounded-full bg-stone-100 px-2.5 py-0.5 text-xs font-medium text-stone-600">
               Yönetim Paneli
             </span>
+            {/* Üretim Kuyruğuna Hızlı Erişim Linki */}
+            <Link
+              href="/queue"
+              className="rounded-full border border-stone-300 bg-white px-2.5 py-0.5 text-xs font-semibold text-stone-700 hover:bg-stone-100 transition"
+            >
+              Üretim Kuyruğu →
+            </Link>
           </div>
 
           <div className="flex items-center gap-3">
@@ -48,7 +71,7 @@ export default async function DashboardPage() {
               </svg>
               Yeni Anı Sayfası
             </Link>
-            <form action={logout}>
+            <form action={signOut}>
               <button
                 type="submit"
                 className="cursor-pointer rounded-xl border border-stone-200 px-3 py-2 text-xs font-medium text-stone-600 transition hover:bg-stone-100"
@@ -69,7 +92,7 @@ export default async function DashboardPage() {
           </p>
         </div>
 
-        {!memorials || memorials.length === 0 ? (
+        {memorials.length === 0 ? (
           /* Boş Ekran Durumu */
           <div className="flex flex-col items-center justify-center rounded-3xl border-2 border-dashed border-stone-200 bg-white p-12 text-center shadow-sm">
             <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-stone-100 text-stone-400">

@@ -1,56 +1,71 @@
-import QRCodeCard from "../../../components/QRCodeCard";
-import MemoryForm from "../../../components/MemoryForm";
+import GuestbookForm from "@/components/GuestbookForm";
+import QRCodeCard from "@/components/QRCodeCard";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "../../../lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { deleteMemory } from "./actions";
 
+export const dynamic = "force-dynamic";
+
 interface Props {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ slug: string }> | { slug: string };
 }
 
-export default async function PublicMemoryPage({ params }: Props) {
-  const { slug } = await params;
+export default async function PublicMemoryPage(props: Props) {
+  const resolvedParams = await Promise.resolve(props.params);
+  const slug = resolvedParams.slug;
   const supabase = await createClient();
 
   // Supabase'den anı sayfasını çek
-  const { data: memory, error } = await supabase
-    .from("memorials")
+  const { data: rawMemory, error } = await (supabase.from("memorials") as any)
     .select("*")
     .eq("slug", slug)
     .single();
 
-  if (error || !memory) {
+  if (error || !rawMemory) {
     notFound();
   }
+
+  const memory = rawMemory;
 
   // Giriş yapmış kullanıcıyı kontrol et ve sayfa sahibi olup olmadığını belirle
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const isOwner = Boolean(user && user.id === memory.user_id);
+
+  const isOwner = Boolean(
+    user && (user.id === memory.owner_id || user.id === memory.user_id)
+  );
 
   // Bu sayfaya ait gerçek ziyaretçi mesajlarını çek (en yeniden eskiye)
-  const { data: notes } = await supabase
-    .from("memories")
+  const { data: notes } = await (supabase.from("memories") as any)
     .select("*")
     .eq("memorial_id", memory.id)
     .order("created_at", { ascending: false });
 
-  const memoryList = notes || [];
+  const memoryList = (notes as any[]) || [];
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
   return (
     <div className="min-h-screen bg-stone-100 text-stone-800 antialiased selection:bg-stone-200">
-      {/* Üst Zarif Başlık */}
+      {/* Üst Başlık */}
       <header className="border-b border-stone-200/80 bg-white/70 py-4 backdrop-blur-md">
         <div className="mx-auto flex max-w-2xl items-center justify-between px-4">
-          <Link
-            href="/dashboard"
-            className="font-serif text-sm tracking-widest text-stone-500 uppercase hover:text-stone-900 transition"
-          >
+          <span className="font-serif text-sm tracking-widest text-stone-500 uppercase">
             ANIKOD HATIRA SAYFASI
-          </Link>
-          <span className="text-xs text-stone-400">/{slug}</span>
+          </span>
+
+          <div className="flex items-center gap-3">
+            {isOwner && (
+              <Link
+                href="/dashboard"
+                className="rounded-xl border border-stone-300 bg-white px-3 py-1.5 text-xs font-semibold text-stone-700 shadow-sm transition hover:bg-stone-100"
+              >
+                Yönetim Paneli
+              </Link>
+            )}
+            <span className="text-xs text-stone-400">/{slug}</span>
+          </div>
         </div>
       </header>
 
@@ -109,14 +124,14 @@ export default async function PublicMemoryPage({ params }: Props) {
             Hatıra Sayfası Karekodu
           </h3>
           <QRCodeCard
-            url={`http://localhost:3000/m/${slug}`}
+            url={`${siteUrl}/m/${slug}`}
             name={memory.full_name}
           />
         </section>
 
         {/* Ziyaretçi Defteri / Taziye Bölümü */}
         <section className="mt-10">
-          <div className="flex items-center justify-between px-2">
+          <div className="flex items-center justify-between px-2 mb-4">
             <h3 className="font-serif text-xl font-bold text-stone-900">
               Ziyaretçi Defteri
             </h3>
@@ -125,8 +140,8 @@ export default async function PublicMemoryPage({ params }: Props) {
             </span>
           </div>
 
-          {/* Gelişmiş Loading & Reset Destekli Form */}
-          <MemoryForm memorialId={memory.id} slug={slug} />
+          {/* Guestbook Formu bağlandı */}
+          <GuestbookForm memorialId={memory.id} slug={slug} />
 
           {/* Mesaj Listesi */}
           <div className="mt-6 space-y-3">
@@ -153,7 +168,7 @@ export default async function PublicMemoryPage({ params }: Props) {
                         })}
                       </span>
 
-                      {/* Sadece sayfa sahibi giriş yapmışsa silme butonunu göster */}
+                      {/* Sayfa sahibi giriş yapmışsa silme butonu */}
                       {isOwner && (
                         <form action={deleteMemory}>
                           <input type="hidden" name="memoryId" value={note.id} />
@@ -164,7 +179,7 @@ export default async function PublicMemoryPage({ params }: Props) {
                             className="text-stone-400 hover:text-red-500 transition-colors p-1 cursor-pointer"
                           >
                             <svg
-                              className="h-3.5 w-3.5"
+                              className="h-4 w-4"
                               fill="none"
                               viewBox="0 0 24 24"
                               strokeWidth="1.5"
