@@ -174,8 +174,8 @@ export default function MemorialCard({ memorial, siteUrl }: MemorialCardProps) {
           </div>
 
           {/* Orta Sıra: Sipariş Durumu VEYA Sipariş Verme Butonu */}
-          <div className="pt-1">
-            {latestOrder ? (
+          <div className="pt-1 space-y-2">
+            {latestOrder && (
               <div className="rounded-xl border border-stone-200 bg-stone-50/70 p-3 text-xs">
                 <div className="flex items-center justify-between">
                   <span className="font-medium text-stone-600">Plaket Siparişi:</span>
@@ -197,9 +197,9 @@ export default function MemorialCard({ memorial, siteUrl }: MemorialCardProps) {
                   </div>
                 )}
               </div>
-            ) : (
-              <OrderModal memorialId={memorial.id} memorialName={memorial.full_name} />
             )}
+
+            <OrderModal memorialId={memorial.id} memorialName={memorial.full_name} />
           </div>
 
           {/* Alt Sıra: Düzenle & Sil Butonları */}

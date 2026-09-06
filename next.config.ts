@@ -4,7 +4,7 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  serverExternalPackages: [],
+  serverExternalPackages: ["iyzipay"],
 };
 
 export default nextConfig;
