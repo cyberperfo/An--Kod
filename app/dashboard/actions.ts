@@ -2,8 +2,6 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
-import { createCheckoutForm } from "@/lib/supabase/iyzico";
 
 export async function deleteMemorial(formData: FormData) {
   const supabase = await createClient();
@@ -67,7 +65,7 @@ export async function createOrder(formData: FormData) {
       phone: phone,
       plate_type: plateType || "metal",
       shipping_address: shippingAddress,
-      status: "pending",
+      status: "completed",
     })
     .select()
     .single();
@@ -77,66 +75,8 @@ export async function createOrder(formData: FormData) {
     return { success: false, error: "Sipariş kaydedilirken bir hata oluştu." };
   }
 
-  const headersList = await headers();
-  const host = headersList.get("host") || "localhost:3000";
-  const protocol = host.includes("localhost") ? "http" : "https";
-  const callbackUrl = `${protocol}://${host}/api/payment/callback`;
-
-  const price = "350.00";
-  const nameParts = fullName.trim().split(" ");
-  const name = nameParts[0] || "Müşteri";
-  const surname = nameParts.slice(1).join(" ") || "Soyadı";
-
-  try {
-    const iyziResult = await createCheckoutForm({
-      price,
-      paidPrice: price,
-      basketId: order.id,
-      callbackUrl,
-      buyer: {
-        id: user.id,
-        name,
-        surname,
-        gsmNumber: phone,
-        email: user.email || "ornek@email.com",
-        identityNumber: "11111111110",
-        registrationAddress: shippingAddress,
-        ip: headersList.get("x-forwarded-for") || "127.0.0.1",
-        city: "Istanbul",
-        country: "Turkey",
-      },
-      shippingAddress: {
-        contactName: fullName,
-        city: "Istanbul",
-        country: "Turkey",
-        address: shippingAddress,
-      },
-      basketItems: [
-        {
-          id: memorialId,
-          name: "Anikod Hatıra Plaketi",
-          category1: "Fiziksel Plaket",
-          itemType: "PHYSICAL",
-          price,
-        },
-      ],
-    });
-
-    console.log("İYZICO SDK CEVABI:", JSON.stringify(iyziResult, null, 2));
-
-    if (iyziResult.status === "success") {
-      return {
-        success: true,
-        checkoutHtmlContent: iyziResult.checkoutFormContent,
-        paymentUrl: iyziResult.paymentPageUrl,
-      };
-    } else {
-      return { success: false, error: iyziResult.errorMessage || "Ödeme başlatılamadı." };
-    }
-  } catch (err: any) {
-    console.error("İyzico hata:", err);
-    return { success: false, error: "Ödeme servisine bağlanırken bir hata oluştu." };
-  }
+  revalidatePath("/dashboard");
+  return { success: true, message: "Siparişiniz başarıyla oluşturuldu." };
 }
 
 export async function updateOrderStatus(formData: FormData) {

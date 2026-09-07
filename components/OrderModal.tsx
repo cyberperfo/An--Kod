@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createOrder } from "@/app/dashboard/actions";
+import { useRouter } from "next/navigation";
 
 interface OrderModalProps {
   memorialId: string;
@@ -12,6 +13,7 @@ export default function OrderModal({ memorialId, memorialName }: OrderModalProps
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const router = useRouter();
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -21,10 +23,13 @@ export default function OrderModal({ memorialId, memorialName }: OrderModalProps
     const formData = new FormData(e.currentTarget);
     const res = await createOrder(formData);
 
-    if (res?.success && res?.paymentUrl) {
-      window.location.href = res.paymentUrl;
+    if (res?.success) {
+      setIsOpen(false);
+      router.refresh();
+      // İsteğe bağlı olarak başarı mesajı gösterebilir veya sayfayı yenileyebilirsin
+      alert(res.message || "Siparişiniz başarıyla oluşturuldu.");
     } else {
-      setErrorMessage(res?.error || "Ödeme başlatılırken bir hata oluştu.");
+      setErrorMessage(res?.error || "Sipariş oluşturulurken bir hata oluştu.");
       setLoading(false);
     }
   }
@@ -50,7 +55,7 @@ export default function OrderModal({ memorialId, memorialName }: OrderModalProps
           <div className="w-full max-w-xl rounded-3xl bg-white p-6 shadow-2xl transition-all my-8">
             <div className="flex items-center justify-between border-b border-stone-100 pb-3">
               <div>
-                <h3 className="font-serif text-lg font-bold text-stone-900">Fiziksel Plaket Ödemesi</h3>
+                <h3 className="font-serif text-lg font-bold text-stone-900">Fiziksel Plaket Siparişi</h3>
                 <p className="text-xs text-stone-500">{memorialName} için özel QR plaka</p>
               </div>
               <button
@@ -130,7 +135,7 @@ export default function OrderModal({ memorialId, memorialName }: OrderModalProps
                   disabled={loading}
                   className="rounded-xl bg-stone-900 px-4 py-2 text-xs font-semibold text-white transition hover:bg-stone-800 disabled:opacity-50 cursor-pointer"
                 >
-                  {loading ? "Ödemeye Yönlendiriliyor..." : "Ödemeye Geç (350 TL)"}
+                  {loading ? "Sipariş Oluşturuluyor..." : "Siparişi Tamamla (350 TL)"}
                 </button>
               </div>
             </form>
