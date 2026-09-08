@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { createOrder } from "@/app/dashboard/actions";
 import { useRouter } from "next/navigation";
+import { PLATE_MATERIALS, PLATE_MATERIAL_INFO, type PlateMaterial } from "@/lib/plate-materials";
 
 interface OrderModalProps {
   memorialId: string;
@@ -13,6 +14,7 @@ export default function OrderModal({ memorialId, memorialName }: OrderModalProps
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [material, setMaterial] = useState<PlateMaterial>("stainless_steel");
   const router = useRouter();
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -97,18 +99,48 @@ export default function OrderModal({ memorialId, memorialName }: OrderModalProps
                 />
               </div>
 
+              <input type="hidden" name="plateType" value="metal" />
+
               <div>
-                <label className="block text-xs font-semibold text-stone-700 mb-1">Plaket Materyali</label>
-                <select
-                  name="plateType"
-                  defaultValue="metal"
-                  className="w-full rounded-xl border border-stone-200 px-3 py-2 text-xs focus:border-stone-400 focus:outline-none bg-white"
+                <label className="block text-xs font-semibold text-stone-700 mb-2">
+                  Plaka Materyali ve Rengi
+                </label>
+
+                {/* Canlı Önizleme */}
+                <div
+                  className={`mb-3 flex aspect-[10/7] w-full flex-col items-center justify-center rounded-2xl border border-stone-200 p-4 text-center shadow-inner transition-colors ${PLATE_MATERIAL_INFO[material].previewClassName}`}
                 >
-                  <option value="metal">Metal Paslanmaz Plaka (350 TL)</option>
-                  <option value="standard">Standart Plaka (350 TL)</option>
-                  <option value="premium">Premium Plaka (350 TL)</option>
-                  <option value="custom">Özel Tasarım Plaka (350 TL)</option>
-                </select>
+                  <p
+                    className={`font-serif text-sm font-bold ${PLATE_MATERIAL_INFO[material].textClassName}`}
+                  >
+                    {memorialName}
+                  </p>
+                  <div className="mt-2 h-8 w-8 rounded-md border border-black/10 bg-black/10" />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  {PLATE_MATERIALS.map((value) => (
+                    <label
+                      key={value}
+                      className="flex cursor-pointer flex-col gap-0.5 rounded-xl border border-stone-200 p-2.5 text-[11px] transition-colors hover:bg-stone-50 has-[:checked]:border-stone-500 has-[:checked]:bg-stone-50"
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <input
+                          type="radio"
+                          name="plateMaterial"
+                          value={value}
+                          checked={material === value}
+                          onChange={() => setMaterial(value)}
+                          className="accent-stone-900"
+                        />
+                        <span className="font-semibold text-stone-800">
+                          {PLATE_MATERIAL_INFO[value].label}
+                        </span>
+                      </span>
+                      <span className="text-stone-500">{PLATE_MATERIAL_INFO[value].description}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
 
               <div>

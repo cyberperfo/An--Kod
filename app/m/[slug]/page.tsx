@@ -3,6 +3,7 @@ import QRCodeCard from "@/components/QRCodeCard";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { getSignedPhotoUrl } from "@/lib/supabase/media";
 import { deleteMemory } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -16,17 +17,42 @@ export default async function PublicMemoryPage(props: Props) {
   const slug = resolvedParams.slug;
   const supabase = await createClient();
 
-  // Supabase'den anı sayfasını çek
+  // Supabase'den anı sayfasını çek (RLS gizlilik seviyesine göre satırı filtreler)
   const { data: rawMemory, error } = await (supabase.from("memorials") as any)
     .select("*")
     .eq("slug", slug)
     .single();
 
   if (error || !rawMemory) {
+    // RLS bu satırı gizlemiş olabilir (aile-özel/gizli) ya da satır hiç yok —
+    // içeriği sızdırmadan bu iki durumu ayırt edip kullanıcıya doğru mesajı göster.
+    // Diğer rpc() çağrılarında da görülen, projede önceden var olan generic
+    // tip çözümleme sorunu nedeniyle (bkz. app/queue/actions.ts) `as any` ile aşılıyoruz.
+    const { data: accessState } = await (supabase.rpc as any)("memorial_access_state", {
+      p_slug: slug,
+    });
+
+    if (accessState === "restricted") {
+      return (
+        <div className="flex min-h-screen items-center justify-center bg-stone-100 px-6 text-center">
+          <div className="max-w-sm">
+            <h1 className="font-serif text-2xl font-bold text-stone-900">
+              Bu içerik gizli tutuluyor
+            </h1>
+            <p className="mt-2 text-sm text-stone-500">
+              Bu anı sayfasının sahibi, içeriği sadece kendisi veya aile üyeleriyle
+              paylaşmayı tercih etti. Görüntülemek için yetkiniz bulunmuyor.
+            </p>
+          </div>
+        </div>
+      );
+    }
+
     notFound();
   }
 
   const memory = rawMemory;
+  const photoUrl = await getSignedPhotoUrl(supabase, memory.cover_photo_path);
 
   // Giriş yapmış kullanıcıyı kontrol et ve sayfa sahibi olup olmadığını belirle
   const {
@@ -56,6 +82,11 @@ export default async function PublicMemoryPage(props: Props) {
           </span>
 
           <div className="flex items-center gap-3">
+            {isOwner && memory.visibility !== "public" && (
+              <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-semibold text-amber-800">
+                {memory.visibility === "private" ? "Tamamen Gizli" : "Sadece Aile"}
+              </span>
+            )}
             {isOwner && (
               <Link
                 href="/dashboard"
@@ -75,10 +106,10 @@ export default async function PublicMemoryPage(props: Props) {
           {/* Fotoğraf Alanı */}
           <div className="flex flex-col items-center border-b border-stone-100 px-6 pt-10 pb-8 text-center">
             <div className="relative flex h-36 w-36 items-center justify-center overflow-hidden rounded-full border-4 border-white bg-stone-100 shadow-md">
-              {memory.cover_photo_url ? (
+              {photoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={memory.cover_photo_url}
+                  src={photoUrl}
                   alt={memory.full_name}
                   className="h-full w-full object-cover"
                 />

@@ -3,15 +3,22 @@
 import { useActionState, useRef, useState } from "react";
 import Link from "next/link";
 import { updateMemorial, type UpdateMemorialState } from "@/app/dashboard/memorials/[id]/actions";
+import VisibilitySelector from "@/components/VisibilitySelector";
 import type { Database } from "@/types/database.types";
 
 type Memorial = Database["public"]["Tables"]["memorials"]["Row"];
 
 const initialState: UpdateMemorialState = { error: null };
 
-export default function EditMemorialForm({ memorial }: { memorial: Memorial }) {
+export default function EditMemorialForm({
+  memorial,
+  photoUrl,
+}: {
+  memorial: Memorial;
+  photoUrl: string | null;
+}) {
   const [state, formAction, isPending] = useActionState(updateMemorial, initialState);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(memorial.cover_photo_url);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(photoUrl);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -40,7 +47,7 @@ export default function EditMemorialForm({ memorial }: { memorial: Memorial }) {
       className="space-y-6 rounded-2xl border border-stone-200 bg-white p-6 shadow-sm sm:p-8"
     >
       <input type="hidden" name="id" value={memorial.id} />
-      <input type="hidden" name="existingPhotoUrl" value={memorial.cover_photo_url ?? ""} />
+      <input type="hidden" name="existingPhotoPath" value={memorial.cover_photo_path ?? ""} />
 
       {/* Sürükle-bırak fotoğraf alanı */}
       <div>
@@ -146,6 +153,8 @@ export default function EditMemorialForm({ memorial }: { memorial: Memorial }) {
           className="w-full resize-none rounded-xl border border-stone-200 p-3.5 text-sm focus:border-stone-400 focus:outline-none disabled:bg-stone-100"
         />
       </div>
+
+      <VisibilitySelector defaultValue={memorial.visibility ?? "public"} disabled={isPending} />
 
       {state.error && (
         <p className="rounded-xl bg-red-50 px-3.5 py-2.5 text-sm text-red-600" role="alert">

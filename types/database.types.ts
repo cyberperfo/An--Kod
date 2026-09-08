@@ -7,7 +7,7 @@
  */
 
 export type UserRole = "customer" | "producer" | "admin";
-export type MemorialVisibility = "family_only" | "public";
+export type MemorialVisibility = "public" | "family_only" | "private";
 export type MemorialStatus = "draft" | "active" | "archived";
 export type MemoryType = "photo" | "video" | "text_memory";
 export type MemoryVisibility = "inherit" | "family_only";
@@ -15,16 +15,20 @@ export type MemberRole = "family_admin" | "family_member";
 export type MemberStatus = "invited" | "accepted" | "revoked";
 export type PlaqueType = "standard" | "premium" | "custom";
 export type PaymentStatus = "pending" | "paid" | "refunded" | "failed";
+/**
+ * DÜZELTME: Bu enum önceden gerçek kodda hiç kullanılmayan varsayımsal
+ * değerler içeriyordu (draft, qr_generated, produced, delivered...).
+ * Gerçek akış — dashboard/actions.ts (createOrder), api/payment/callback
+ * ve queue/actions.ts (advanceOrderStatus) — sadece bu 6 değeri kullanır;
+ * bkz. supabase/004_order_status_state_machine.sql'deki CHECK constraint.
+ */
 export type OrderStatus =
-  | "draft"
-  | "payment_pending"
+  | "pending"
   | "paid"
-  | "qr_generated"
-  | "production_queued"
   | "in_production"
-  | "produced"
   | "shipped"
-  | "delivered";
+  | "completed"
+  | "cancelled";
 export type QrIssueReason = "initial_order" | "replacement";
 
 export type Database = {
@@ -57,6 +61,7 @@ export type Database = {
           death_date: string;
           biography: string | null;
           cover_photo_url: string | null;
+          cover_photo_path: string | null;
           visibility: MemorialVisibility;
           status: MemorialStatus;
           slug: string | null;
@@ -71,6 +76,7 @@ export type Database = {
           death_date: string;
           biography?: string | null;
           cover_photo_url?: string | null;
+          cover_photo_path?: string | null;
           visibility?: MemorialVisibility;
           status?: MemorialStatus;
           slug?: string | null;
@@ -137,10 +143,14 @@ export type Database = {
           customer_id: string;
           memorial_id: string;
           plaque_type: PlaqueType;
+          plate_type: string | null;
+          plate_material: string | null;
           recipient_full_name: string;
           shipping_address: Record<string, unknown>;
           payment_status: PaymentStatus;
           status: OrderStatus;
+          tracking_number: string | null;
+          carrier: string | null;
           iyzico_payment_id: string | null;
           iyzico_conversation_id: string | null;
           iyzico_raw_response: Record<string, unknown> | null;
@@ -153,10 +163,14 @@ export type Database = {
           customer_id: string;
           memorial_id: string;
           plaque_type: PlaqueType;
+          plate_type?: string | null;
+          plate_material?: string | null;
           recipient_full_name: string;
           shipping_address: Record<string, unknown>;
           payment_status?: PaymentStatus;
           status?: OrderStatus;
+          tracking_number?: string | null;
+          carrier?: string | null;
           iyzico_payment_id?: string | null;
           iyzico_conversation_id?: string | null;
           iyzico_raw_response?: Record<string, unknown> | null;
@@ -230,6 +244,10 @@ export type Database = {
         Args: Record<string, never>;
         Returns: boolean;
       };
+      memorial_access_state: {
+        Args: { p_slug: string };
+        Returns: "visible" | "restricted" | "not_found";
+      };
       get_producer_queue: {
         Args: Record<string, never>;
         Returns: {
@@ -243,8 +261,13 @@ export type Database = {
         }[];
       };
       advance_order_status: {
-        Args: { p_order_id: string; p_new_status: OrderStatus };
-        Returns: void;
+        Args: {
+          p_order_id: string;
+          p_new_status: OrderStatus;
+          p_tracking_number?: string | null;
+          p_carrier?: string | null;
+        };
+        Returns: Database["public"]["Tables"]["orders"]["Row"];
       };
     };
 

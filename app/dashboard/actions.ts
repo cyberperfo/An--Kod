@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { PLATE_MATERIALS, type PlateMaterial } from "@/lib/plate-materials";
 
 export async function deleteMemorial(formData: FormData) {
   const supabase = await createClient();
@@ -33,6 +34,36 @@ export async function deleteMemorial(formData: FormData) {
   revalidatePath("/dashboard");
 }
 
+export async function acceptInvite(formData: FormData) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error("Yetkisiz işlem. Lütfen giriş yapın.");
+  }
+
+  const inviteId = formData.get("inviteId") as string;
+  if (!inviteId) {
+    throw new Error("Davet ID bilgisi bulunamadı.");
+  }
+
+  // RLS ("memorial_members: accept own invite") sadece invited_email,
+  // giriş yapan kullanıcının e-postasıyla eşleşiyorsa bu güncellemeye izin verir.
+  const { error } = await (supabase.from("memorial_members") as any)
+    .update({ status: "accepted", user_id: user.id })
+    .eq("id", inviteId);
+
+  if (error) {
+    console.error("Davet kabul edilemedi:", error);
+    throw new Error(`Davet kabul edilemedi: ${error.message}`);
+  }
+
+  revalidatePath("/dashboard");
+}
+
 export async function createOrder(formData: FormData) {
   const supabase = await createClient();
 
@@ -48,6 +79,7 @@ export async function createOrder(formData: FormData) {
   const fullName = formData.get("fullName") as string;
   const phone = formData.get("phone") as string;
   const plateType = formData.get("plateType") as string;
+  const plateMaterial = formData.get("plateMaterial") as string;
   const shippingAddress = formData.get("shippingAddress") as string;
 
   if (!memorialId || !fullName || !phone || !shippingAddress) {
@@ -64,8 +96,11 @@ export async function createOrder(formData: FormData) {
       recipient_full_name: fullName,
       phone: phone,
       plate_type: plateType || "metal",
+      plate_material: PLATE_MATERIALS.includes(plateMaterial as PlateMaterial)
+        ? plateMaterial
+        : "stainless_steel",
       shipping_address: shippingAddress,
-      status: "completed",
+      status: "pending",
     })
     .select()
     .single();
@@ -77,41 +112,4 @@ export async function createOrder(formData: FormData) {
 
   revalidatePath("/dashboard");
   return { success: true, message: "Siparişiniz başarıyla oluşturuldu." };
-}
-
-export async function updateOrderStatus(formData: FormData) {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    throw new Error("Yetkisiz işlem. Lütfen giriş yapın.");
-  }
-
-  const orderId = formData.get("orderId") as string;
-  const status = formData.get("status") as string;
-  const trackingNumber = (formData.get("trackingNumber") as string)?.trim();
-
-  if (!orderId || !status) {
-    throw new Error("Sipariş ID ve durum bilgisi zorunludur.");
-  }
-
-  const updateData: Record<string, any> = { status };
-  if (trackingNumber !== undefined && trackingNumber !== "") {
-    updateData.tracking_number = trackingNumber;
-  }
-
-  const { error } = await (supabase.from("orders") as any)
-    .update(updateData)
-    .eq("id", orderId);
-
-  if (error) {
-    console.error("Sipariş durumu güncellenemedi:", error);
-    throw new Error(`Güncelleme başarısız: ${error.message}`);
-  }
-
-  revalidatePath("/queue");
-  revalidatePath("/dashboard");
 }

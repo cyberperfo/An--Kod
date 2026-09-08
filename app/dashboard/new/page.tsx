@@ -3,6 +3,7 @@
 import { useActionState, useRef, useState } from "react";
 import Link from "next/link";
 import { createMemory, type CreateMemoryState } from "./actions";
+import VisibilitySelector from "@/components/VisibilitySelector";
 
 const initialState: CreateMemoryState = { error: null };
 
@@ -187,6 +188,8 @@ export default function NewMemoryPage() {
               className="w-full resize-none rounded-xl border border-stone-200 p-3.5 text-sm focus:border-stone-400 focus:outline-none disabled:bg-stone-100"
             />
           </div>
+
+          <VisibilitySelector defaultValue="public" disabled={isPending} />
 
           {state.error && (
             <p className="rounded-xl bg-red-50 px-3.5 py-2.5 text-sm text-red-600" role="alert">

@@ -1,12 +1,14 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import type { Database } from "@/types/database.types";
+import { getUserRole, isAdmin, isProducerOrAdmin } from "./roles";
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
   });
 
-  const supabase = createServerClient(
+  const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -49,6 +51,20 @@ export async function updateSession(request: NextRequest) {
   if (user && (pathname.startsWith("/auth/login") || pathname.startsWith("/auth/register"))) {
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);
+  }
+
+  // Rol bazlı rota koruması: /queue sadece producer/admin, /admin sadece admin.
+  if (user && (pathname.startsWith("/queue") || pathname.startsWith("/admin"))) {
+    const role = await getUserRole(supabase, user.id);
+
+    const forbidden = pathname.startsWith("/admin")
+      ? !isAdmin(role)
+      : !isProducerOrAdmin(role);
+
+    if (forbidden) {
+      url.pathname = "/dashboard";
+      return NextResponse.redirect(url);
+    }
   }
 
   return supabaseResponse;

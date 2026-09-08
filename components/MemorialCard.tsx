@@ -13,6 +13,7 @@ type Memorial = Database["public"]["Tables"]["memorials"]["Row"] & {
     id: string;
     status: string;
     tracking_number?: string | null;
+    carrier?: string | null;
     plate_type?: string | null;
     plaque_type?: string | null;
     created_at?: string;
@@ -22,14 +23,27 @@ type Memorial = Database["public"]["Tables"]["memorials"]["Row"] & {
 interface MemorialCardProps {
   memorial: Memorial;
   siteUrl: string;
+  /** Bucket private olduğu için önceden sunucu tarafında üretilmiş signed URL. */
+  photoUrl: string | null;
 }
 
-export default function MemorialCard({ memorial, siteUrl }: MemorialCardProps) {
+export default function MemorialCard({ memorial, siteUrl, photoUrl }: MemorialCardProps) {
   const [qrOpen, setQrOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const publicUrl = `${siteUrl}/m/${memorial.slug}`;
+
+  const visibilityBadge = (() => {
+    switch (memorial.visibility) {
+      case "private":
+        return { label: "Tamamen Gizli", className: "bg-stone-800 text-white" };
+      case "family_only":
+        return { label: "Sadece Aile", className: "bg-amber-100 text-amber-800" };
+      default:
+        return { label: "Herkese Açık", className: "bg-emerald-100 text-emerald-800" };
+    }
+  })();
 
   // En son verilen siparişi al
   const latestOrder =
@@ -101,14 +115,19 @@ export default function MemorialCard({ memorial, siteUrl }: MemorialCardProps) {
             <span className="inline-block rounded-md bg-stone-100 px-2 py-0.5 font-mono text-xs text-stone-600">
               /m/{memorial.slug}
             </span>
+            <span
+              className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${visibilityBadge.className}`}
+            >
+              {visibilityBadge.label}
+            </span>
           </div>
 
           <div className="flex items-center gap-4">
             <div className="h-14 w-14 shrink-0 overflow-hidden rounded-full border border-stone-200 bg-stone-100">
-              {memorial.cover_photo_url ? (
+              {photoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={memorial.cover_photo_url}
+                  src={photoUrl}
                   alt={memorial.full_name}
                   className="h-full w-full object-cover"
                 />
@@ -190,7 +209,9 @@ export default function MemorialCard({ memorial, siteUrl }: MemorialCardProps) {
 
                 {latestOrder.tracking_number && (
                   <div className="mt-2 flex items-center justify-between border-t border-stone-200/60 pt-2 text-[11px]">
-                    <span className="text-stone-400">Kargo Takip:</span>
+                    <span className="text-stone-400">
+                      {latestOrder.carrier || "Kargo Takip"}:
+                    </span>
                     <span className="font-mono font-semibold text-stone-800">
                       {latestOrder.tracking_number}
                     </span>
@@ -202,14 +223,22 @@ export default function MemorialCard({ memorial, siteUrl }: MemorialCardProps) {
             <OrderModal memorialId={memorial.id} memorialName={memorial.full_name} />
           </div>
 
-          {/* Alt Sıra: Düzenle & Sil Butonları */}
+          {/* Alt Sıra: Düzenle, Aile Üyeleri & Sil Butonları */}
           <div className="flex items-center justify-between border-t border-stone-100 pt-2">
-            <Link
-              href={`/dashboard/memorials/${memorial.id}/edit`}
-              className="rounded-lg px-3 py-1.5 text-xs font-medium text-stone-600 transition-colors hover:bg-stone-100"
-            >
-              Düzenle
-            </Link>
+            <div className="flex items-center gap-1">
+              <Link
+                href={`/dashboard/memorials/${memorial.id}/edit`}
+                className="rounded-lg px-3 py-1.5 text-xs font-medium text-stone-600 transition-colors hover:bg-stone-100"
+              >
+                Düzenle
+              </Link>
+              <Link
+                href={`/dashboard/memorials/${memorial.id}/members`}
+                className="rounded-lg px-3 py-1.5 text-xs font-medium text-stone-600 transition-colors hover:bg-stone-100"
+              >
+                Aile Üyeleri
+              </Link>
+            </div>
             <button
               type="button"
               onClick={handleDelete}

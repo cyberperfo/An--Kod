@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import * as QRCode from "qrcode";
 import Link from "next/link";
 import PrintButton from "./PrintButton";
+import { PLATE_MATERIAL_INFO, type PlateMaterial } from "@/lib/plate-materials";
 
 interface PrintPageProps {
   params: Promise<{ slug: string }> | { slug: string };
@@ -22,6 +23,17 @@ export default async function PrintTemplatePage(props: PrintPageProps) {
   if (!memorial) {
     notFound();
   }
+
+  const { data: latestOrder } = await (supabase.from("orders") as any)
+    .select("plate_material")
+    .eq("memorial_id", memorial.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const materialInfo = latestOrder?.plate_material
+    ? PLATE_MATERIAL_INFO[latestOrder.plate_material as PlateMaterial]
+    : null;
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
   const targetUrl = `${siteUrl}/m/${memorial.slug}`;
@@ -53,6 +65,12 @@ export default async function PrintTemplatePage(props: PrintPageProps) {
         </Link>
         <PrintButton />
       </div>
+
+      {materialInfo && (
+        <div className="mx-auto mb-4 max-w-xl rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-center text-xs font-semibold text-amber-800 print:hidden">
+          Materyal: {materialInfo.label}
+        </div>
+      )}
 
       {/* Lazer / Plaket Baskı Şablonu (Fiziksel Boyut: ~10cm x 7cm Standart Plaka) */}
       <div className="mx-auto flex aspect-[10/7] max-w-xl flex-col items-center justify-between rounded-2xl border-2 border-stone-900 bg-white p-8 shadow-md print:m-0 print:h-[70mm] print:w-[100mm] print:border-2 print:border-black print:p-6 print:shadow-none">

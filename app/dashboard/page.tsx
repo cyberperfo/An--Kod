@@ -4,8 +4,10 @@ export const revalidate = 0;
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getSignedPhotoUrls } from "@/lib/supabase/media";
 import { signOut } from "@/app/auth/actions";
 import MemorialCard from "@/components/MemorialCard";
+import PendingInviteAcceptButton from "@/components/PendingInviteAcceptButton";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -28,6 +30,7 @@ export default async function DashboardPage() {
         id,
         status,
         tracking_number,
+        carrier,
         plaque_type,
         plate_type,
         created_at
@@ -38,6 +41,18 @@ export default async function DashboardPage() {
 
   const memorials = (data as any[]) || [];
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+
+  // Bucket private olduğu için görselleri toplu halde signed URL'e çeviriyoruz.
+  const signedPhotoUrls = await getSignedPhotoUrls(
+    supabase,
+    memorials.map((m) => m.cover_photo_path)
+  );
+
+  // Bekleyen aile üyeliği davetleri (bu kullanıcının e-postasıyla eşleşen).
+  const { data: pendingInvites } = await (supabase.from("memorial_members") as any)
+    .select("id, memorial_id, role, memorials ( full_name, slug )")
+    .eq("invited_email", user.email)
+    .eq("status", "invited");
 
   return (
     <div className="min-h-screen bg-stone-50 text-stone-900 antialiased">
@@ -85,6 +100,27 @@ export default async function DashboardPage() {
 
       {/* Ana İçerik */}
       <main className="mx-auto max-w-5xl px-6 py-10">
+        {pendingInvites && pendingInvites.length > 0 && (
+          <div className="mb-8 rounded-2xl border border-amber-200 bg-amber-50 p-5">
+            <h2 className="font-serif text-sm font-bold text-amber-900">
+              Bekleyen Aile Üyeliği Davetiniz Var
+            </h2>
+            <ul className="mt-3 space-y-2">
+              {(pendingInvites as any[]).map((invite) => (
+                <li
+                  key={invite.id}
+                  className="flex items-center justify-between rounded-xl bg-white px-4 py-2.5 text-sm shadow-sm"
+                >
+                  <span className="text-stone-700">
+                    <strong>{invite.memorials?.full_name}</strong> anı sayfasına davet edildiniz.
+                  </span>
+                  <PendingInviteAcceptButton inviteId={invite.id} />
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         <div className="mb-8">
           <h1 className="font-serif text-3xl font-bold text-stone-900">Anı Sayfalarınız</h1>
           <p className="mt-1 text-sm text-stone-500">
@@ -121,7 +157,14 @@ export default async function DashboardPage() {
           /* Anı Sayfalarının Listesi */
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
             {memorials.map((memorial) => (
-              <MemorialCard key={memorial.id} memorial={memorial} siteUrl={siteUrl} />
+              <MemorialCard
+                key={memorial.id}
+                memorial={memorial}
+                siteUrl={siteUrl}
+                photoUrl={
+                  memorial.cover_photo_path ? signedPhotoUrls[memorial.cover_photo_path] ?? null : null
+                }
+              />
             ))}
           </div>
         )}

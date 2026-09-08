@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { getSignedPhotoUrl } from "@/lib/supabase/media";
 import EditMemorialForm from "@/components/EditMemorialForm";
 
 interface Props {
@@ -34,6 +35,7 @@ export default async function EditMemorialPage({ params }: Props) {
 
   // TS tip hatasını atlamak için veriyi any olarak tanımlıyoruz
   const memorial = data as any;
+  const photoUrl = await getSignedPhotoUrl(supabase, memorial.cover_photo_path);
 
   return (
     <div className="min-h-screen bg-stone-50 p-6 text-stone-900 antialiased sm:p-10">
@@ -53,7 +55,7 @@ export default async function EditMemorialPage({ params }: Props) {
           </p>
         </div>
 
-        <EditMemorialForm memorial={memorial} />
+        <EditMemorialForm memorial={memorial} photoUrl={photoUrl} />
       </div>
     </div>
   );

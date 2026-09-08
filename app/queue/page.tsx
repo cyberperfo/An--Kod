@@ -2,46 +2,20 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 import { createClient } from "@/lib/supabase/server";
+import { getUserRole, isProducerOrAdmin } from "@/lib/supabase/roles";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { revalidatePath } from "next/cache";
+import OrderStatusForm from "./OrderStatusForm";
 
-// Server Action doğrudan sayfa içinde tanımlandı
-async function updateOrderStatus(formData: FormData) {
-  "use server";
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    throw new Error("Yetkisiz işlem.");
+function formatShippingAddress(value: unknown): string {
+  if (!value) return "Adres belirtilmemiş";
+  if (typeof value === "string") return value;
+  if (typeof value === "object") {
+    return Object.values(value as Record<string, unknown>)
+      .filter(Boolean)
+      .join(", ");
   }
-
-  const orderId = formData.get("orderId") as string;
-  const status = formData.get("status") as string;
-  const trackingNumber = (formData.get("trackingNumber") as string)?.trim();
-
-  const updateData: Record<string, any> = { status };
-  if (trackingNumber !== undefined) {
-    updateData.tracking_number = trackingNumber;
-  }
-
-  const { data, error } = await (supabase.from("orders") as any)
-    .update(updateData)
-    .eq("id", orderId)
-    .select();
-
-  if (error) {
-    console.error("Supabase UPDATE hatası detayı:", error);
-    throw new Error(`Güncelleme başarısız: ${error.message}`);
-  }
-
-  console.log("Sipariş durumu güncellendi:", data);
-
-  revalidatePath("/queue");
-  revalidatePath("/dashboard");
+  return String(value);
 }
 
 export default async function QueuePage() {
@@ -53,6 +27,13 @@ export default async function QueuePage() {
 
   if (!user) {
     redirect("/auth/login");
+  }
+
+  // Middleware zaten /queue'yu producer/admin dışına kapatıyor;
+  // burada da savunma amaçlı ikinci bir kontrol yapıyoruz.
+  const role = await getUserRole(supabase, user.id);
+  if (!isProducerOrAdmin(role)) {
+    redirect("/dashboard");
   }
 
   // Siparişleri anı bilgileriyle birlikte çek
@@ -161,7 +142,7 @@ export default async function QueuePage() {
                           <p className="font-medium text-stone-900">{customerName}</p>
                           <p className="text-xs text-stone-500">{customerPhone}</p>
                           <p className="mt-1 text-xs text-stone-400 line-clamp-2 max-w-xs">
-                            {order.shipping_address}
+                            {formatShippingAddress(order.shipping_address)}
                           </p>
                         </td>
 
@@ -172,40 +153,14 @@ export default async function QueuePage() {
                           </span>
                         </td>
 
-                        {/* Durum Değiştirme Formu */}
+                        {/* Durum Değiştirme */}
                         <td className="px-6 py-4">
-                          <form action={updateOrderStatus} className="flex flex-col gap-2">
-                            <input type="hidden" name="orderId" value={order.id} />
-
-                            <div className="flex items-center gap-2">
-                              <select
-                                name="status"
-                                defaultValue={order.status}
-                                className="rounded-lg border border-stone-300 bg-white px-2.5 py-1.5 text-xs font-medium text-stone-700 focus:border-stone-500 focus:outline-none"
-                              >
-                                <option value="pending">Bekliyor (Pending)</option>
-                                <option value="in_production">Üretimde (In Production)</option>
-                                <option value="shipped">Kargoda (Shipped)</option>
-                                <option value="completed">Tamamlandı (Completed)</option>
-                                <option value="cancelled">İptal Edildi (Cancelled)</option>
-                              </select>
-
-                              <button
-                                type="submit"
-                                className="rounded-lg bg-stone-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-stone-800 cursor-pointer"
-                              >
-                                Güncelle
-                              </button>
-                            </div>
-
-                            <input
-                              type="text"
-                              name="trackingNumber"
-                              defaultValue={order.tracking_number || ""}
-                              placeholder="Kargo Takip No"
-                              className="rounded-lg border border-stone-200 px-2.5 py-1 text-xs focus:border-stone-400 focus:outline-none w-44"
-                            />
-                          </form>
+                          <OrderStatusForm
+                            orderId={order.id}
+                            status={order.status}
+                            trackingNumber={order.tracking_number ?? null}
+                            carrier={order.carrier ?? null}
+                          />
                         </td>
 
                         {/* İşlemler / QR & Lazer Baskı */}
