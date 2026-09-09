@@ -15,6 +15,7 @@ export default function OrderModal({ memorialId, memorialName }: OrderModalProps
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [material, setMaterial] = useState<PlateMaterial>("stainless_steel");
+  const [checkoutFormContent, setCheckoutFormContent] = useState<string | null>(null);
   const router = useRouter();
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -25,15 +26,21 @@ export default function OrderModal({ memorialId, memorialName }: OrderModalProps
     const formData = new FormData(e.currentTarget);
     const res = await createOrder(formData);
 
-    if (res?.success) {
-      setIsOpen(false);
+    if (res?.success && res.checkoutFormContent) {
+      // Sipariş oluşturuldu, şimdi ödeme adımını göster.
+      setCheckoutFormContent(res.checkoutFormContent);
+      setLoading(false);
       router.refresh();
-      // İsteğe bağlı olarak başarı mesajı gösterebilir veya sayfayı yenileyebilirsin
-      alert(res.message || "Siparişiniz başarıyla oluşturuldu.");
     } else {
       setErrorMessage(res?.error || "Sipariş oluşturulurken bir hata oluştu.");
       setLoading(false);
     }
+  }
+
+  function handleClose() {
+    setIsOpen(false);
+    setCheckoutFormContent(null);
+    setErrorMessage(null);
   }
 
   return (
@@ -62,7 +69,7 @@ export default function OrderModal({ memorialId, memorialName }: OrderModalProps
               </div>
               <button
                 type="button"
-                onClick={() => setIsOpen(false)}
+                onClick={handleClose}
                 className="rounded-lg p-1 text-stone-400 hover:bg-stone-100 hover:text-stone-700 cursor-pointer"
               >
                 ✕
@@ -75,6 +82,21 @@ export default function OrderModal({ memorialId, memorialName }: OrderModalProps
               </div>
             )}
 
+            {checkoutFormContent ? (
+              <div className="mt-4 flex flex-col gap-3">
+                <p className="text-xs text-stone-500">
+                  Siparişiniz oluşturuldu. Ödemeyi tamamlamak için aşağıdaki adımı izleyin.
+                </p>
+                <div dangerouslySetInnerHTML={{ __html: checkoutFormContent }} />
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  className="self-start rounded-xl px-3 py-2 text-xs font-semibold text-stone-500 hover:bg-stone-50 cursor-pointer"
+                >
+                  Vazgeç
+                </button>
+              </div>
+            ) : (
             <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-3">
               <input type="hidden" name="memorialId" value={memorialId} />
 
@@ -157,7 +179,7 @@ export default function OrderModal({ memorialId, memorialName }: OrderModalProps
               <div className="mt-2 flex items-center justify-end gap-2 border-t border-stone-100 pt-3">
                 <button
                   type="button"
-                  onClick={() => setIsOpen(false)}
+                  onClick={handleClose}
                   className="rounded-xl px-3 py-2 text-xs font-semibold text-stone-500 hover:bg-stone-50 cursor-pointer"
                 >
                   İptal
@@ -171,6 +193,7 @@ export default function OrderModal({ memorialId, memorialName }: OrderModalProps
                 </button>
               </div>
             </form>
+            )}
           </div>
         </div>
       )}

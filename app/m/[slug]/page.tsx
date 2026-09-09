@@ -2,32 +2,32 @@ import GuestbookForm from "@/components/GuestbookForm";
 import QRCodeCard from "@/components/QRCodeCard";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { unstable_noStore as noStore } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getSignedPhotoUrl } from "@/lib/supabase/media";
 import { deleteMemory } from "./actions";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 interface Props {
   params: Promise<{ slug: string }> | { slug: string };
 }
 
 export default async function PublicMemoryPage(props: Props) {
+  noStore();
+
   const resolvedParams = await Promise.resolve(props.params);
   const slug = resolvedParams.slug;
   const supabase = await createClient();
 
-  // Supabase'den anı sayfasını çek (RLS gizlilik seviyesine göre satırı filtreler)
+  // Supabase'den anı sayfasını çek
   const { data: rawMemory, error } = await (supabase.from("memorials") as any)
     .select("*")
     .eq("slug", slug)
     .single();
 
   if (error || !rawMemory) {
-    // RLS bu satırı gizlemiş olabilir (aile-özel/gizli) ya da satır hiç yok —
-    // içeriği sızdırmadan bu iki durumu ayırt edip kullanıcıya doğru mesajı göster.
-    // Diğer rpc() çağrılarında da görülen, projede önceden var olan generic
-    // tip çözümleme sorunu nedeniyle (bkz. app/queue/actions.ts) `as any` ile aşılıyoruz.
     const { data: accessState } = await (supabase.rpc as any)("memorial_access_state", {
       p_slug: slug,
     });
@@ -52,16 +52,33 @@ export default async function PublicMemoryPage(props: Props) {
   }
 
   const memory = rawMemory;
-  const photoUrl = await getSignedPhotoUrl(supabase, memory.cover_photo_path);
 
   // Giriş yapmış kullanıcıyı kontrol et ve sayfa sahibi olup olmadığını belirle
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const isOwner = Boolean(
-    user && (user.id === memory.owner_id || user.id === memory.user_id)
-  );
+  const isOwner = Boolean(user?.id && memory.owner_id && user.id === memory.owner_id);
+
+  // Savunma Katmanı (Defense-in-Depth): Veritabanı politikasından bağımsız olarak, 
+  // sayfa herkese açık değilse ve bakan kişi sahibi değilse içeriği kesinlikle gizle.
+  if (memory.visibility !== "public" && !isOwner) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-stone-100 px-6 text-center">
+        <div className="max-w-sm">
+          <h1 className="font-serif text-2xl font-bold text-stone-900">
+            Bu içerik gizli tutuluyor
+          </h1>
+          <p className="mt-2 text-sm text-stone-500">
+            Bu anı sayfasının sahibi, içeriği sadece kendisi veya aile üyeleriyle
+            paylaşmayı tercih etti. Görüntülemek için yetkiniz bulunmuyor.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const photoUrl = await getSignedPhotoUrl(supabase, memory.cover_photo_path);
 
   // Bu sayfaya ait gerçek ziyaretçi mesajlarını çek (en yeniden eskiye)
   const { data: notes } = await (supabase.from("memories") as any)

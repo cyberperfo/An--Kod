@@ -2,7 +2,9 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { PLATE_MATERIALS, type PlateMaterial } from "@/lib/plate-materials";
+import { createCheckoutForm } from "@/lib/supabase/payment";
 
 export async function deleteMemorial(formData: FormData) {
   const supabase = await createClient();
@@ -20,11 +22,12 @@ export async function deleteMemorial(formData: FormData) {
     throw new Error("Hatıra ID bilgisi bulunamadı.");
   }
 
+  // DÜZELTME: user_id yerine veritabanı şemasıyla uyumlu olan owner_id kullanıldı
   const { error } = await supabase
     .from("memorials")
     .delete()
     .eq("id", id)
-    .eq("user_id", user.id);
+    .eq("owner_id", user.id);
 
   if (error) {
     console.error("Hatıra silinemedi:", error);
@@ -110,6 +113,59 @@ export async function createOrder(formData: FormData) {
     return { success: false, error: "Sipariş kaydedilirken bir hata oluştu." };
   }
 
-  revalidatePath("/dashboard");
-  return { success: true, message: "Siparişiniz başarıyla oluşturuldu." };
+  const orderId = (order as { id: string }).id;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const requestHeaders = await headers();
+  const ip = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() || "85.34.78.112";
+
+  const { data: memorial } = await (supabase.from("memorials") as any)
+    .select("full_name")
+    .eq("id", memorialId)
+    .single();
+
+  try {
+    const { checkoutFormContent } = await createCheckoutForm({
+      price: "350.00",
+      paidPrice: "350.00",
+      basketId: orderId,
+      buyer: {
+        id: user.id,
+        name: fullName || "Müşteri",
+        surname: "-",
+        email: user.email || "musteri@anikod.com",
+        gsmNumber: phone,
+        ip,
+        city: "Istanbul",
+        country: "Turkey",
+        registrationAddress: shippingAddress,
+      },
+      shippingAddress: {
+        contactName: fullName,
+        city: "Istanbul",
+        country: "Turkey",
+        address: shippingAddress,
+      },
+      basketItems: [
+        {
+          id: orderId,
+          name: `Fiziksel Plaket — ${memorial?.full_name || "Hatıra Sayfası"}`,
+          category1: "Plaket",
+          itemType: "PHYSICAL",
+          price: "350.00",
+        },
+      ],
+      callbackUrl: `${siteUrl}/api/payment/callback`,
+    });
+
+    revalidatePath("/dashboard");
+    return { success: true, orderId, checkoutFormContent };
+  } catch (paymentError: any) {
+    console.error("Ödeme formu oluşturulamadı:", paymentError);
+    // Sipariş zaten "pending" olarak kayıtlı — ödeme kurulamasa da veri kaybı yok,
+    // sadece kullanıcıya net bir hata gösteriyoruz.
+    return {
+      success: false,
+      error: paymentError.message || "Ödeme başlatılamadı, lütfen tekrar deneyin.",
+    };
+  }
 }

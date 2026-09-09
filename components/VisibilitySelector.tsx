@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { MemorialVisibility } from "@/types/database.types";
 
 const OPTIONS: {
@@ -31,8 +32,11 @@ export default function VisibilitySelector({
   defaultValue?: MemorialVisibility;
   disabled?: boolean;
 }) {
+  const [selected, setSelected] = useState<MemorialVisibility>(defaultValue);
+
   return (
     <div>
+      <input type="hidden" name="visibility" value={selected} />
       <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-stone-500">
         Gizlilik Seviyesi
       </label>
@@ -40,14 +44,19 @@ export default function VisibilitySelector({
         {OPTIONS.map((option) => (
           <label
             key={option.value}
-            className="flex cursor-pointer flex-col gap-1 rounded-xl border border-stone-200 p-3 text-xs transition-colors hover:bg-stone-50 has-[:checked]:border-stone-500 has-[:checked]:bg-stone-50"
+            className={`flex cursor-pointer flex-col gap-1 rounded-xl border p-3 text-xs transition-colors ${
+              selected === option.value
+                ? "border-stone-500 bg-stone-50"
+                : "border-stone-200 hover:bg-stone-50"
+            }`}
           >
             <span className="flex items-center gap-2">
               <input
                 type="radio"
-                name="visibility"
+                name="visibility_radio_ui" // Çakışmayı önlemek için arayüz ismi ayrıldı
                 value={option.value}
-                defaultChecked={option.value === defaultValue}
+                checked={selected === option.value}
+                onChange={() => setSelected(option.value)}
                 disabled={disabled}
                 className="accent-stone-900"
               />

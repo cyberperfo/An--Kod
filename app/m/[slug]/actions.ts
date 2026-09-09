@@ -88,10 +88,11 @@ export async function deleteMemory(formData: FormData): Promise<void> {
     throw new Error("Mesaj veya anı kaydı doğrulanamadı.");
   }
 
+  // Sadece owner_id'ye bakılıyor — legacy user_id kolonu RLS'te de referans
+  // alınmıyor ve güvenilir/güncel olduğu garanti değil (bkz. page.tsx isOwner).
   const memorial = targetMemory.memorials;
-  const ownerId = memorial.owner_id || memorial.user_id;
 
-  if (ownerId !== user.id) {
+  if (!memorial.owner_id || memorial.owner_id !== user.id) {
     throw new Error("Bu mesajı silme yetkiniz bulunmuyor.");
   }
 
