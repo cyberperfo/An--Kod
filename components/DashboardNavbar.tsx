@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { signOut } from "@/app/auth/actions";
 import ThemeToggle from "@/components/ThemeToggle";
+import AccountMenu from "@/components/AccountMenu";
 
 const NAV_LINKS = [
   { href: "/dashboard", label: "Panel" },
@@ -47,25 +47,13 @@ export default function DashboardNavbar({ userEmail }: { userEmail: string | nul
 
         <div className="flex items-center gap-2.5">
           <ThemeToggle />
-          {userEmail && (
-            <span className="hidden text-xs text-stone-500 dark:text-stone-400 sm:inline">
-              {userEmail}
-            </span>
-          )}
           <Link
             href="/dashboard/new"
             className="hidden items-center gap-1.5 rounded-xl bg-stone-900 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-stone-800 sm:inline-flex dark:bg-white dark:text-stone-900 dark:hover:bg-stone-200"
           >
             + Yeni Anı Sayfası
           </Link>
-          <form action={signOut}>
-            <button
-              type="submit"
-              className="cursor-pointer rounded-xl border border-stone-200 px-3 py-2 text-xs font-medium text-stone-600 transition hover:bg-stone-100 dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-800"
-            >
-              Çıkış Yap
-            </button>
-          </form>
+          <AccountMenu userEmail={userEmail} />
         </div>
       </div>
 
