@@ -109,10 +109,10 @@ export default function MemorialCard({ memorial, siteUrl, photoUrl }: MemorialCa
 
   return (
     <>
-      <div className="flex flex-col justify-between rounded-2xl border border-stone-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md">
+      <div className="flex flex-col justify-between rounded-2xl border border-stone-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-stone-800 dark:bg-stone-900">
         <div>
           <div className="mb-3 flex items-center justify-between gap-2">
-            <span className="inline-block rounded-md bg-stone-100 px-2 py-0.5 font-mono text-xs text-stone-600">
+            <span className="inline-block rounded-md bg-stone-100 px-2 py-0.5 font-mono text-xs text-stone-600 dark:bg-stone-800 dark:text-stone-400">
               /m/{memorial.slug}
             </span>
             <span
@@ -123,7 +123,7 @@ export default function MemorialCard({ memorial, siteUrl, photoUrl }: MemorialCa
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="h-14 w-14 shrink-0 overflow-hidden rounded-full border border-stone-200 bg-stone-100">
+            <div className="h-14 w-14 shrink-0 overflow-hidden rounded-full border border-stone-200 bg-stone-100 dark:border-stone-700 dark:bg-stone-800">
               {photoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -132,7 +132,7 @@ export default function MemorialCard({ memorial, siteUrl, photoUrl }: MemorialCa
                   className="h-full w-full object-cover"
                 />
               ) : (
-                <div className="flex h-full w-full items-center justify-center text-stone-300">
+                <div className="flex h-full w-full items-center justify-center text-stone-300 dark:text-stone-600">
                   <svg
                     className="h-7 w-7"
                     fill="none"
@@ -150,25 +150,25 @@ export default function MemorialCard({ memorial, siteUrl, photoUrl }: MemorialCa
               )}
             </div>
             <div>
-              <h3 className="font-serif text-lg font-bold text-stone-900">{memorial.full_name}</h3>
-              <p className="mt-0.5 text-xs text-stone-500">
+              <h3 className="font-serif text-lg font-bold text-stone-900 dark:text-white">{memorial.full_name}</h3>
+              <p className="mt-0.5 text-xs text-stone-500 dark:text-stone-400">
                 {memorial.birth_date || "—"} &nbsp;•&nbsp; {memorial.death_date || "—"}
               </p>
             </div>
           </div>
 
           {memorial.biography && (
-            <p className="mt-4 line-clamp-3 text-sm text-stone-600">{memorial.biography}</p>
+            <p className="mt-4 line-clamp-3 text-sm text-stone-600 dark:text-stone-400">{memorial.biography}</p>
           )}
         </div>
 
-        <div className="mt-6 space-y-3 border-t border-stone-100 pt-4">
+        <div className="mt-6 space-y-3 border-t border-stone-100 pt-4 dark:border-stone-800">
           {/* Üst Sıra: Sayfayı Gör & QR Kod Butonları */}
           <div className="flex items-center justify-between">
             <Link
               href={`/m/${memorial.slug}`}
               target="_blank"
-              className="inline-flex items-center gap-1 text-xs font-semibold text-stone-900 hover:underline"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-stone-900 hover:underline dark:text-white"
             >
               Sayfayı Gör
               <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
@@ -179,7 +179,7 @@ export default function MemorialCard({ memorial, siteUrl, photoUrl }: MemorialCa
             <button
               type="button"
               onClick={() => setQrOpen(true)}
-              className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-stone-100 px-3 py-1.5 text-xs font-medium text-stone-700 transition-colors hover:bg-stone-200"
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-stone-100 px-3 py-1.5 text-xs font-medium text-stone-700 transition-colors hover:bg-stone-200 dark:bg-stone-800 dark:text-stone-300 dark:hover:bg-stone-700"
             >
               <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
                 <path
@@ -195,9 +195,9 @@ export default function MemorialCard({ memorial, siteUrl, photoUrl }: MemorialCa
           {/* Orta Sıra: Sipariş Durumu VEYA Sipariş Verme Butonu */}
           <div className="pt-1 space-y-2">
             {latestOrder && (
-              <div className="rounded-xl border border-stone-200 bg-stone-50/70 p-3 text-xs">
+              <div className="rounded-xl border border-stone-200 bg-stone-50/70 p-3 text-xs dark:border-stone-700 dark:bg-stone-800/60">
                 <div className="flex items-center justify-between">
-                  <span className="font-medium text-stone-600">Plaket Siparişi:</span>
+                  <span className="font-medium text-stone-600 dark:text-stone-400">Plaket Siparişi:</span>
                   <span
                     className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${
                       getStatusBadge(latestOrder.status).className
@@ -208,11 +208,11 @@ export default function MemorialCard({ memorial, siteUrl, photoUrl }: MemorialCa
                 </div>
 
                 {latestOrder.tracking_number && (
-                  <div className="mt-2 flex items-center justify-between border-t border-stone-200/60 pt-2 text-[11px]">
+                  <div className="mt-2 flex items-center justify-between border-t border-stone-200/60 pt-2 text-[11px] dark:border-stone-700">
                     <span className="text-stone-400">
                       {latestOrder.carrier || "Kargo Takip"}:
                     </span>
-                    <span className="font-mono font-semibold text-stone-800">
+                    <span className="font-mono font-semibold text-stone-800 dark:text-stone-200">
                       {latestOrder.tracking_number}
                     </span>
                   </div>
@@ -224,17 +224,17 @@ export default function MemorialCard({ memorial, siteUrl, photoUrl }: MemorialCa
           </div>
 
           {/* Alt Sıra: Düzenle, Aile Üyeleri & Sil Butonları */}
-          <div className="flex items-center justify-between border-t border-stone-100 pt-2">
+          <div className="flex items-center justify-between border-t border-stone-100 pt-2 dark:border-stone-800">
             <div className="flex items-center gap-1">
               <Link
                 href={`/dashboard/memorials/${memorial.id}/edit`}
-                className="rounded-lg px-3 py-1.5 text-xs font-medium text-stone-600 transition-colors hover:bg-stone-100"
+                className="rounded-lg px-3 py-1.5 text-xs font-medium text-stone-600 transition-colors hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800"
               >
                 Düzenle
               </Link>
               <Link
                 href={`/dashboard/memorials/${memorial.id}/members`}
-                className="rounded-lg px-3 py-1.5 text-xs font-medium text-stone-600 transition-colors hover:bg-stone-100"
+                className="rounded-lg px-3 py-1.5 text-xs font-medium text-stone-600 transition-colors hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800"
               >
                 Aile Üyeleri
               </Link>
@@ -243,7 +243,7 @@ export default function MemorialCard({ memorial, siteUrl, photoUrl }: MemorialCa
               type="button"
               onClick={handleDelete}
               disabled={isPending}
-              className="cursor-pointer rounded-lg px-3 py-1.5 text-xs font-medium text-red-500 transition-colors hover:bg-red-50 disabled:opacity-50"
+              className="cursor-pointer rounded-lg px-3 py-1.5 text-xs font-medium text-red-500 transition-colors hover:bg-red-50 disabled:opacity-50 dark:hover:bg-red-500/10"
             >
               {isPending ? "Siliniyor..." : "Sil"}
             </button>

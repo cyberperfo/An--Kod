@@ -109,7 +109,7 @@ export default async function PublicMemoryPage(props: Props) {
                 href="/dashboard"
                 className="rounded-xl border border-stone-300 bg-white px-3 py-1.5 text-xs font-semibold text-stone-700 shadow-sm transition hover:bg-stone-100"
               >
-                Yönetim Paneli
+                Panele Git
               </Link>
             )}
             <span className="text-xs text-stone-400">/{slug}</span>

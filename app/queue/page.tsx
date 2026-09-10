@@ -75,7 +75,7 @@ export default async function QueuePage() {
             href="/dashboard"
             className="self-start sm:self-auto rounded-xl border border-stone-300 bg-white px-4 py-2 text-xs font-semibold text-stone-700 shadow-sm transition hover:bg-stone-50"
           >
-            ← Yönetim Paneline Dön
+            ← Panele Dön
           </Link>
         </div>
 

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { PLATE_MATERIALS, type PlateMaterial } from "@/lib/plate-materials";
 import { createCheckoutForm } from "@/lib/supabase/payment";
+import { PLAQUE_ORDER_PRICE_DECIMAL } from "@/lib/pricing";
 
 export async function deleteMemorial(formData: FormData) {
   const supabase = await createClient();
@@ -125,8 +126,8 @@ export async function createOrder(formData: FormData) {
 
   try {
     const { checkoutFormContent } = await createCheckoutForm({
-      price: "350.00",
-      paidPrice: "350.00",
+      price: PLAQUE_ORDER_PRICE_DECIMAL,
+      paidPrice: PLAQUE_ORDER_PRICE_DECIMAL,
       basketId: orderId,
       buyer: {
         id: user.id,
@@ -151,7 +152,7 @@ export async function createOrder(formData: FormData) {
           name: `Fiziksel Plaket — ${memorial?.full_name || "Hatıra Sayfası"}`,
           category1: "Plaket",
           itemType: "PHYSICAL",
-          price: "350.00",
+          price: PLAQUE_ORDER_PRICE_DECIMAL,
         },
       ],
       callbackUrl: `${siteUrl}/api/payment/callback`,
