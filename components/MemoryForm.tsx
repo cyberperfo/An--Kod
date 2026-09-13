@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef } from "react";
-import { addMemory } from "../app/m/[slug]/actions";
+import { addMemory, type AddMemoryResult } from "../app/m/[slug]/actions";
 
 interface MemoryFormProps {
   memorialId: string;
@@ -11,15 +11,18 @@ interface MemoryFormProps {
 export default function MemoryForm({ memorialId, slug }: MemoryFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
 
-  // useActionState ile hem yüklenme durumunu hem de aksiyonu yönetiyoruz
-  const [, formAction, isPending] = useActionState(
-    async (prevState: unknown, formData: FormData) => {
-      await addMemory(formData);
-      formRef.current?.reset(); // Gönderim başarılı olunca formu temizle
-      return null;
+  const [state, formAction, isPending] = useActionState<AddMemoryResult, FormData>(
+    async (_prevState, formData) => {
+      return addMemory(formData);
     },
-    null
+    { ok: false, error: null }
   );
+
+  useEffect(() => {
+    if (state.ok) {
+      formRef.current?.reset();
+    }
+  }, [state.ok]);
 
   return (
     <form
@@ -33,6 +36,18 @@ export default function MemoryForm({ memorialId, slug }: MemoryFormProps) {
       <h4 className="text-sm font-semibold text-stone-800">
         Bir Anı veya Taziye Mesajı Bırakın
       </h4>
+
+      {state.error && (
+        <p role="alert" className="rounded-xl bg-red-50 px-3 py-2 text-xs text-red-700">
+          {state.error}
+        </p>
+      )}
+
+      {state.ok && (
+        <p role="status" className="rounded-xl bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+          Mesajınız anı sayfasına eklendi.
+        </p>
+      )}
 
       <input
         type="text"

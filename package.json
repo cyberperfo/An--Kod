@@ -19,6 +19,7 @@
     "react-dom": "^19.2.8"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
     "@types/iyzipay": "^2.0.3",
     "@types/node": "^26.4.1",
     "@types/qrcode": "^1.5.6",

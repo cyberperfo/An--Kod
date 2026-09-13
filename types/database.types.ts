@@ -50,6 +50,7 @@ export type Database = {
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["profiles"]["Insert"]>;
+        Relationships: [];
       };
 
       memorials: {
@@ -84,16 +85,19 @@ export type Database = {
           updated_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["memorials"]["Insert"]>;
+        Relationships: [];
       };
 
       memories: {
         Row: {
           id: string;
           memorial_id: string;
-          uploaded_by: string;
+          uploaded_by: string | null;
           type: MemoryType;
           content_url: string | null;
           caption: string | null;
+          author_name: string | null;
+          message: string | null;
           visibility_override: MemoryVisibility;
           is_approved: boolean;
           created_at: string;
@@ -101,15 +105,18 @@ export type Database = {
         Insert: {
           id?: string;
           memorial_id: string;
-          uploaded_by: string;
+          uploaded_by?: string | null;
           type: MemoryType;
           content_url?: string | null;
           caption?: string | null;
+          author_name?: string | null;
+          message?: string | null;
           visibility_override?: MemoryVisibility;
           is_approved?: boolean;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["memories"]["Insert"]>;
+        Relationships: [];
       };
 
       memorial_members: {
@@ -134,6 +141,7 @@ export type Database = {
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["memorial_members"]["Insert"]>;
+        Relationships: [];
       };
 
       orders: {
@@ -178,6 +186,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["orders"]["Insert"]>;
+        Relationships: [];
       };
 
       order_status_history: {
@@ -198,6 +207,7 @@ export type Database = {
           changed_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["order_status_history"]["Insert"]>;
+        Relationships: [];
       };
 
       qr_codes: {
@@ -218,6 +228,7 @@ export type Database = {
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["qr_codes"]["Insert"]>;
+        Relationships: [];
       };
 
       support_messages: {
@@ -256,6 +267,7 @@ export type Database = {
           cover_photo_url: string | null;
           slug: string | null;
         };
+        Relationships: [];
       };
     };
 

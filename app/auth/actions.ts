@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 export type AuthActionState = {
   error: string | null;
+  message?: string | null;
 };
 
 export async function login(
@@ -29,7 +30,7 @@ export async function login(
     // GoTrue, e-postası henüz doğrulanmamış bir hesapla girişte bu mesajı döner.
     // Kullanıcıyı hatayla baş başa bırakmak yerine doğrudan kod giriş ekranına yönlendiriyoruz.
     if (error.message.toLowerCase().includes("email not confirmed")) {
-      redirect(`/auth/verify?email=${encodeURIComponent(email)}`);
+      redirect(`/auth/check-email?email=${encodeURIComponent(email)}`);
     }
     return { error: error.message };
   }
@@ -55,6 +56,7 @@ export async function signUp(
     email,
     password,
     options: {
+      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/auth/callback`,
       data: {
         full_name: fullName || "",
       },
@@ -68,7 +70,7 @@ export async function signUp(
   // E-posta onayı açıksa kullanıcı oluşur fakat session oluşmaz — hesap
   // 6 haneli kod doğrulanana kadar aktif değildir (bkz. app/auth/verify).
   if (data.user && !data.session) {
-    redirect(`/auth/verify?email=${encodeURIComponent(email)}`);
+    redirect(`/auth/check-email?email=${encodeURIComponent(email)}`);
   }
 
   redirect("/dashboard");
@@ -76,6 +78,35 @@ export async function signUp(
 
 // Sayfa import uyumluluğu için
 export const register = signUp;
+
+export async function resendVerification(
+  prevState: AuthActionState,
+  formData: FormData
+): Promise<AuthActionState> {
+  const email = String(formData.get("email") || "").trim();
+
+  if (!email) {
+    return { error: "Doğrulama e-postası göndermek için e-posta adresinizi yazın." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resend({
+    type: "signup",
+    email,
+    options: {
+      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/auth/callback`,
+    },
+  });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  return {
+    error: null,
+    message: "Doğrulama e-postası yeniden gönderildi. Gelen kutunuzu kontrol edin.",
+  };
+}
 
 export type VerifyOtpState = { error: string | null };
 

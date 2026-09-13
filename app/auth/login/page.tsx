@@ -1,13 +1,17 @@
 "use client";
 
 import { useActionState } from "react";
+import { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { login, type AuthActionState } from "../actions";
 
 const initialState: AuthActionState = { error: null };
 
-export default function LoginPage() {
+function LoginForm() {
   const [state, formAction, isPending] = useActionState(login, initialState);
+  const searchParams = useSearchParams();
+  const isEmailCheckMessage = searchParams.get("message") === "check_email";
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-stone-100/60 px-4 py-12 selection:bg-stone-800 selection:text-white">
@@ -27,6 +31,15 @@ export default function LoginPage() {
         {/* Form Kartı */}
         <div className="rounded-2xl border border-stone-200 bg-white p-8 shadow-sm">
           <form action={formAction} className="space-y-5">
+            {isEmailCheckMessage && (
+              <div className="rounded-lg border border-green-200 bg-green-50 p-3.5 text-sm text-green-700">
+                Hesabınız oluşturuldu. Giriş yapmadan önce e-posta adresinizi doğrulayın.
+                <Link href="/auth/check-email" className="mt-1 block font-medium underline underline-offset-4">
+                  Doğrulama e-postasını yeniden gönder
+                </Link>
+              </div>
+            )}
+
             {/* Hata Bildirimi */}
             {state?.error && (
               <div
@@ -140,5 +153,13 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   );
 }
